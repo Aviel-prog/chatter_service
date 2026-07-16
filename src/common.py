@@ -22,32 +22,39 @@ Message types
 
 import json
 
-# Default TCP port shared by the server (listen) and client (connect).
-DEFAULT_PORT = 7777
-
-# Client operating modes.
-MODE_WRITER = "writer"
-MODE_READER = "reader"
-
-# Protocol message types.
-TYPE_HELLO = "hello"
-TYPE_MSG = "msg"
-TYPE_CHAT = "chat"
-
-# Timestamp format used both in the CSV log and on the wire.
-TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
-
-_ENCODING = "utf-8"
+from const import _ENCODING, TYPE_HELLO, TYPE_IMAGE, TYPE_CHAT, NEWLINE_BYTES, CHAT_LINE_FORMAT, \
+    JSON_ERRORS, TYPE_MATRIX, NEWLINE, TYPE_PREMONITIONS, TYPE_MSG
 
 
 def encode(obj):
     """Serialise a protocol object to a newline-terminated UTF-8 frame."""
-    return (json.dumps(obj) + "\n").encode(_ENCODING)
+    return (json.dumps(obj) + NEWLINE).encode(_ENCODING)
 
 
-def make_hello(mode, username=None):
+def make_hello(mode, username=None, ):
     """Build the handshake message a client sends on connect."""
     return {"type": TYPE_HELLO, "mode": mode, "username": username}
+
+
+def make_image(image_path, username):
+    return {"type": TYPE_IMAGE,  # Custom message type for your server to identify
+            "path": image_path,
+            "username": username
+            }
+
+
+def make_matrix(payload, username):
+    return {"type": TYPE_MATRIX,  # Custom message type for your server to identify
+            "content": payload,
+            "username": username
+            }
+
+
+def make_premonitions(payload, username):
+    return {"type": TYPE_PREMONITIONS,  # Custom message type for your server to identify
+            "premonitions": payload,
+            "username": username
+            }
 
 
 def make_msg(text):
@@ -67,7 +74,7 @@ def make_chat(username, timestamp, text):
 
 def format_chat_line(username, timestamp, text):
     """Human-readable form a reader prints for one chat message."""
-    return "[{0}] {1}: {2}".format(timestamp, username, text)
+    return CHAT_LINE_FORMAT.format(timestamp, username, text)
 
 
 class LineBuffer(object):
@@ -81,20 +88,20 @@ class LineBuffer(object):
     """
 
     def __init__(self):
-        self._buffer = b""
+        self._buffer = NEWLINE_BYTES
 
     def feed(self, data):
         """Add received bytes and return a list of complete messages."""
         self._buffer += data
         messages = []
-        while b"\n" in self._buffer:
-            line, self._buffer = self._buffer.split(b"\n", 1)
+        while NEWLINE_BYTES in self._buffer:
+            line, self._buffer = self._buffer.split(NEWLINE_BYTES, 1)
             line = line.strip()
             if not line:
                 continue
             try:
                 messages.append(json.loads(line.decode(_ENCODING)))
-            except (ValueError, UnicodeDecodeError):
+            except JSON_ERRORS:
                 # Ignore malformed frames rather than crash the peer.
                 continue
         return messages
