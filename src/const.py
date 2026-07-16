@@ -14,6 +14,7 @@ BUFFER_SIZE = 4096
 DEFAULT_HOST = "127.0.0.1"
 MODE_WRITER = "writer"
 MODE_READER = "reader"
+MODE_DUPLEX = "duplex"
 DEFAULT_USERNAME = "anonymous"
 READ_MODE = "r"
 
